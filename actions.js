@@ -12,8 +12,9 @@ const {
     loadClipByName 
 } = require('./src/actionHandlers');
 
-module.exports = (self) => {
-    return {
+module.exports = function (self)  {
+    self.setActionDefinitions({
+
         // Basic playback actions
         play: {
             name: 'Play',
@@ -188,5 +189,5 @@ module.exports = (self) => {
                 }
             },
         },
-    };
-};
+    } )
+}
