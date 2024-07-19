@@ -31,7 +31,7 @@ const loadClipByCleanName = async (instance, cleanName) => {
     }
 };
 
-// New Advanced Playback Control Actions
+// works
 const jumpToTime = async (instance, time) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/transport/jump/${time}`, { method: 'POST' });
@@ -42,6 +42,7 @@ const jumpToTime = async (instance, time) => {
     }
 };
 
+//works
 const jumpToEnd = async (instance, time) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/transport/end/${time}`, { method: 'POST' });
@@ -52,6 +53,7 @@ const jumpToEnd = async (instance, time) => {
     }
 };
 
+//works
 const requeueCurrentClip = async (instance) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/recue`, { method: 'POST' });
@@ -62,6 +64,7 @@ const requeueCurrentClip = async (instance) => {
     }
 };
 
+//works
 const queuePreviousClip = async (instance) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/previous`, { method: 'POST' });
@@ -72,6 +75,8 @@ const queuePreviousClip = async (instance) => {
     }
 };
 
+
+//works
 const queueNextClip = async (instance) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/next`, { method: 'POST' });
@@ -138,10 +143,10 @@ const handleLoadClipByIndex = async (instance, index) => {
     await fetchAndUpdateResponse(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/active/id/${index}`, instance);
 };
 
+
 module.exports = {
     fetchPlaylistData,
     findClipByClipName,
-    setSelectedClip,
     //setSelectedClip,
     loadClipByCleanName,
     jumpToTime,
