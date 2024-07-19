@@ -1,6 +1,7 @@
 const { 
     handlePlay, 
     handlePause, 
+	handleToggle,
     handleStop, 
     handleLoadClipByIndex, 
     jumpToTime, 
@@ -27,6 +28,13 @@ module.exports = function (self)  {
                 }
             },
         },
+		toggle: {
+			name: 'Toggle Play/Pause',
+			options: [],
+			callback: async () => {
+			  await handleToggle(self);
+			},
+		},
         pause: {
             name: 'Pause',
             options: [],

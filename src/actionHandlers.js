@@ -126,6 +126,10 @@ const handlePause = async (instance) => {
     await fetchAndUpdateResponse(`http://${instance.config.host}:${instance.config.port}/API/PVS/transport/pause`, instance);
 };
 
+const handleToggle = async (instance) => {
+    await fetchAndUpdateResponse(`http://${instance.config.host}:${instance.config.port}/API/PVS/transport/toggle`, instance);
+};
+
 const handleStop = async (instance) => {
     await fetchAndUpdateResponse(`http://${instance.config.host}:${instance.config.port}/API/PVS/transport/stop`, instance);
 };
@@ -149,5 +153,6 @@ module.exports = {
     handlePlay,
     handlePause,
     handleStop,
+    handleToggle,
     handleLoadClipByIndex,
 };
