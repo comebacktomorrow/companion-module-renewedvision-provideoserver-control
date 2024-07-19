@@ -17,9 +17,9 @@ const findClipByClipName = clipName => {
     return thisClip || null;
 };
 
-const setSelectedClip = clipIndex => {
-    return clipIndex;
-};
+// const setSelectedClip = clipIndex => {
+//     return clipIndex;
+// };
 
 const loadClipByCleanName = async (instance, cleanName) => {
     try {
@@ -142,6 +142,7 @@ module.exports = {
     fetchPlaylistData,
     findClipByClipName,
     setSelectedClip,
+    //setSelectedClip,
     loadClipByCleanName,
     jumpToTime,
     jumpToEnd,
