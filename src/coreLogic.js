@@ -1,6 +1,9 @@
+const { timecodeToTotalFrames } = require('./utils') 
+
 let currentLibraryTimeStamp;
 let previousClip = {};
-let currentTimecode;
+let currentTimecode = 0;
+let currentTally = -1;
 
 const updateStatus = (socketData, updateHandlers) => {
     const {
@@ -24,12 +27,15 @@ const updateStatus = (socketData, updateHandlers) => {
         onClipChange(socketData);
     }
 
-    if (currentTimecode !== socketData.timecode) {
+    if (timecodeToTotalFrames(currentTimecode) !== timecodeToTotalFrames(socketData.timecode)) {
         currentTimecode = socketData.timecode;
         onTimecodeUpdate(socketData);
     }
 
-    onTallyUpdate(socketData.tallyState);
+    if (currentTally !== socketData.tallyState){
+        onTallyUpdate(socketData.tallyState);
+        currentTally = socketData.tallyState;
+    }
     previousClip = socketData;
 };
 

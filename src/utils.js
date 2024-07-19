@@ -1,5 +1,5 @@
 //util.js
-//const fetch = require('node-fetch') // Ensure node-fetch is installed and required
+const Timecode = require('./smpte-timecode/smpte-timecode');
 
  const pad = number => number.toString().padStart(2, '0');
 
@@ -20,7 +20,7 @@ function jsonTimecodeToString(timecode, returnZero = true, showFrames = true){
     }
 };
 
- const timecodeToTotalFrames = (timecode, fps) => {
+ const timecodeToTotalFrames = (timecode, fps = 1) => {
     const frames =  (timecode.hours * 3600 + timecode.minutes * 60 + timecode.seconds) * fps + timecode.frames;
     return frames;
 
@@ -104,6 +104,7 @@ async function fetchAndUpdateResponse(url, options = { method: 'POST', body: {} 
     }
   }
 
+  // the issue with this function is that it returns a timecode object unless it's 00:00:00:00
  const calcTimeRemainingAsString = (time1, time2, fps, allowNegative = true) => {
     const frameRate = Math.round(fps * 100)/100;
     //console.log("framte rate is " + frameRate)
@@ -123,12 +124,14 @@ async function fetchAndUpdateResponse(url, options = { method: 'POST', body: {} 
         result = t1.subtract(t2);
         sign = '-'
         } else {
+            console.log('zeroing out');
             result ='00:00:00:00';
         }
         
     }
 
-    return {result: result, sign: sign}; 
+    // so we fixed it by adding toString() into the return...
+    return {result: result.toString(), sign: sign}; 
 }
 
 module.exports = {
