@@ -19,16 +19,35 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	async init(config) {
+		this.updateStatus(InstanceStatus.Disconnected);
+		this.updateStatus(InstanceStatus.Connecting);
 		this.config = config
 		console.log('initing')
-		this.updateStatus(InstanceStatus.Ok);
 		this.updateActions() // export actions
 		this.updateFeedbacks() // export feedbacks
 		this.updateVariableDefinitions() // export variable definitions
-		await this.updatePlaylistVariables();
-		// Validate config and attempt connection
-		//this.validateConfig()
+		
+		this.validateConfig();
 
+		// Validate config and attempt connection
+		if (InstanceStatus.Connecting) {
+			// Fetch playlist data and update variables if the config is valid
+			try {
+				console.log('instance ok');
+				await this.fetchAndSetPlaylistVariables();
+				await this.updatePlaylistVariables();
+				this.updateStatus(InstanceStatus.Ok)
+			} catch (error) {
+				console.error('Error updating playlist variables:', error);
+				this.updateStatus(InstanceStatus.Error);
+			}
+		} else {
+			console.warn('Invalid config. Skipping playlist update.');
+		}
+
+		if (InstanceStatus.Ok){
+			//await this.updatePlaylistVariables();
+			
 		// Initialize WebSocket
         const updateHandlers = {
             onLibraryUpdate: async (data) => {
@@ -95,7 +114,7 @@ class ModuleInstance extends InstanceBase {
         };
 
         setupWebSocket(updateHandlers, this);
-	}
+	}}
 
 	// When module gets deleted
 	async destroy() {
@@ -142,41 +161,14 @@ class ModuleInstance extends InstanceBase {
 	}
 
 	validateConfig() {
-		const { host, port } = this.config
-		if (!host || !Regex.IP.test(host) || !port || !Regex.PORT.test(port)) {
-			this.updateStatus(InstanceStatus.Error, 'Invalid IP address or port')
-			this.log('error', 'Invalid IP address or port')
-			return
+		const { host, port } = this.config;
+		if (!host || !port) {
+			this.log('warn', 'Invalid host or port in config');
+			this.updateStatus(InstanceStatus.BadConfig);
+			return false;
 		}
-
-		this.updateStatus(InstanceStatus.Ok)
-		this.log('info', `Connecting to ProVideoServer at ${host}:${port}`)
-		
-		// Example fetch call to test connection
-		const url = `http://${host}:${port}/API/PVS/status`
-		// fetchAndUpdateResponse(url, 'GET')
-		// 	.then(response => {
-		// 		if (response.status === 'OK') {
-		// 			this.updateStatus(InstanceStatus.Ok)
-		// 		} else {
-		// 			this.updateStatus(InstanceStatus.Error, 'Failed to connect')
-		// 		}
-		// 	})
-		// 	.catch(error => {
-		// 		this.updateStatus(InstanceStatus.Error, 'Connection error')
-		// 		this.log('error', 'Connection error: ' + error.message)
-		// 	})
-	}
-
-	// this should probably be superceeded by fetchAndSetPlaylistVars below
-	async updatePlaylistVariables() {
-		try {
-			console.log("IP " + this.config.host + " PORT "  + this.config.port)
-			const playlist = await fetchPlaylistData(this.config.host, this.config.port);
-			//this.setupClipVariables(playlist);
-		} catch (error) {
-			this.log('error', `Failed to fetch playlist data: ${error.message}`);
-		}
+		this.updateStatus(InstanceStatus.Connecting);
+		return true;
 	}
 
 	async fetchAndSetPlaylistVariables() {
@@ -189,32 +181,29 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	setupClipVariables(playlist) {
-		const playlistSize = this.config.playlistSize || playlist.length;
-		for (let i = 0; i < playlistSize; i++) {
-			const clip = playlist[i] || { name: '', duration: '' };
-			this.setVariable(`clip_name_${i}`, clip.name);
-			this.setVariable(`clip_duration_${i}`, clip.duration);
+	async updatePlaylistVariables() {
+		try {
+			const playlist = await this.fetchAndSetPlaylistVariables();
+			if (playlist) {
+				this.setupClipVariables(playlist);
+			}
+		} catch (error) {
+			this.log('error', `Failed to update playlist variables: ${error.message}`);
 		}
 	}
 
-	setVariable(name, value) {
-		this.variables[name] = value;
-		this.updateVariableDefinitions();
+	setupClipVariables(playlist) {
+		const playlistSize = this.config.playlistSize || playlist.length;
+		for (let i = 0; i < playlistSize; i++) {
+			const clip = playlist[i] || { cleanName: '', duration: '' };
+			this.setVariable(`clip_name_${i}`, clip.cleanName);
+			this.setVariable(`clip_duration_${i}`, simpleTime(jsonTimecodeToString(clip.duration)));
+		}
 	}
 
-
-	// setupClipVariables(playlist) {
-	// 	playlist.forEach((clip, index) => {
-	// 		this.setVariable(`clip_name_${index}`, clip.name);
-	// 		this.setVariable(`clip_duration_${index}`, clip.duration);
-	// 	});
-	// }
-
-	// setVariable(name, value) {
-	// 	this.variables[name] = value;
-	// 	this.updateVariableDefinitions();
-	// }
+	setVariable(variableId, value) {
+		this.setVariableValues({ [variableId]: value });
+	}
 
 	// updateVariableDefinitions() {
 	// 	const variableDefinitions = Object.keys(this.variables).map((key) => ({
