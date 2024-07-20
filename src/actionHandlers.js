@@ -87,16 +87,6 @@ const queueNextClip = async (instance) => {
     }
 };
 
-const loadClipById = async (instance, clipId) => {
-    try {
-        const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/active/id/${clipId}`, { method: 'POST' });
-        const data = await response.json();
-        return data.message;
-    } catch (error) {
-        throw new Error('Error loading clip by ID: ' + error);
-    }
-};
-
 const loadClipByName = async (instance, clipName) => {
     try {
         const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/active/name/${encodeURIComponent(clipName)}`, { method: 'POST' });
@@ -149,16 +139,15 @@ module.exports = {
     findClipByClipName,
     //setSelectedClip,
     loadClipByCleanName,
-    jumpToTime,
-    jumpToEnd,
-    requeueCurrentClip,
-    queuePreviousClip,
-    queueNextClip,
-    loadClipById,
-    loadClipByName,
-    handlePlay,
-    handlePause,
-    handleStop,
-    handleToggle,
-    handleLoadClipByIndex,
+    jumpToTime, //works
+    jumpToEnd, //works
+    requeueCurrentClip, // works
+    queuePreviousClip, //works
+    queueNextClip, //works
+    loadClipByName, //works
+    handlePlay, //works
+    handlePause, //works
+    handleStop, //works
+    handleToggle, //works
+    handleLoadClipByIndex, //works
 };

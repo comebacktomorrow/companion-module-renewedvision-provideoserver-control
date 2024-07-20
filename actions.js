@@ -9,7 +9,6 @@ const {
     requeueCurrentClip, 
     queuePreviousClip, 
     queueNextClip, 
-    loadClipById, 
     loadClipByName 
 } = require('./src/actionHandlers');
 
@@ -149,28 +148,6 @@ module.exports = function (self)  {
             callback: async () => {
                 try {
                     const message = await queueNextClip(self);
-                    self.log('info', message);
-                } catch (error) {
-                    self.log('error', error.message);
-                }
-            },
-        },
-        loadClipById: {
-            name: 'Load Clip by ID',
-            options: [
-                {
-                    type: 'number',
-                    label: 'Clip ID',
-                    id: 'clipId',
-                    default: 0,
-                    min: 0,
-                    max: 9999,
-                },
-            ],
-            callback: async (action) => {
-                const clipId = action.options.clipId;
-                try {
-                    const message = await loadClipById(self, clipId);
                     self.log('info', message);
                 } catch (error) {
                     self.log('error', error.message);
