@@ -9,13 +9,15 @@ const { fetchPlaylistData, findClipByClipName } = require('./src/playlist');
 const { setupWebSocket } = require('./src/websocket');
 const { updateStatus } = require('./src/coreLogic');
 
-let selectedClipData = {};
-let playlistData ={};
-
 class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal);
 		this.variables = {};
+		this.selectedClipData = {};
+		this.playlistData ={};
+		this.playbackState = 'Unknown';
+		this.currentTimecode = '00:00:00:00'
+		this.selectedClipIndex = -1;
 	}
 
 	async init(config) {
@@ -35,7 +37,6 @@ class ModuleInstance extends InstanceBase {
 			try {
 				console.log('instance ok');
 				await this.fetchAndSetPlaylistVariables();
-				await this.updatePlaylistVariables();
 				this.updateStatus(InstanceStatus.Ok)
 			} catch (error) {
 				console.error('Error updating playlist variables:', error);
@@ -46,20 +47,21 @@ class ModuleInstance extends InstanceBase {
 		}
 
 		if (InstanceStatus.Ok){
-			//await this.updatePlaylistVariables();
 			
 		// Initialize WebSocket
         const updateHandlers = {
             onLibraryUpdate: async (data) => {
 				console.log('got library update');
-				playlistData = await this.fetchAndSetPlaylistVariables();
-				selectedClipData = findClipByClipName(data.clipName);
-				if (selectedClipData) {
+				await this.fetchAndSetPlaylistVariables();
+				this.selectedClipData = findClipByClipName(data.clipName);
+				if (this.selectedClipData) {
 					// Process additional data if needed
 					this.setVariableValues({ 
-						current_clip_name: selectedClipData.cleanName, 
-						current_clip_duration: simpleTime(jsonTimecodeToString(selectedClipData.duration)),
-						playback_behavior: selectedClipData.playbackBehavior,
+						current_clip_name: this.selectedClipData.cleanName, 
+						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
+						playback_behavior: this.selectedClipData.playbackBehavior,
+						current_clip_id: this.selectedClipData.index,
+						//we could do selected clip feedback in here
 					});
 				}
             },
@@ -74,6 +76,8 @@ class ModuleInstance extends InstanceBase {
 				};
 				const stateText = stateTextMapping[data.state] || 'Unknown State';
 				this.setVariableValues({ current_playback_state: stateText });
+				this.playbackState = stateText; //new
+				this.checkFeedbacks('playbackState'); //new
 			},
             onClipChange: async (data) => {
 				console.log('got clip change');
@@ -82,29 +86,33 @@ class ModuleInstance extends InstanceBase {
 				// we should move to UUID - we don't have to get playlist for every update
 				// but unless we can accurately track isActive, things will get weird.
 				
-				selectedClipData = findClipByClipName(data.clipName);
-				if (selectedClipData) {
+				this.selectedClipData = findClipByClipName(data.clipName);
+				console.log('main set index as ' + this.selectedClipIndex)
+				if (this.selectedClipData) {
 					this.setVariableValues({ 
-						current_clip_name: selectedClipData.cleanName, 
-						current_clip_duration: simpleTime(jsonTimecodeToString(selectedClipData.duration)),
-						curent_playback_behavior: selectedClipData.playbackBehavior,
+						current_clip_name: this.selectedClipData.cleanName, 
+						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
+						curent_playback_behavior: this.selectedClipData.playbackBehavior,
+						curent_clip_id: this.selectedClipData.index,
 					});
+					this.selectedClipIndex = this.selectedClipData.index; // Set the selected clip index //new
+					this.checkFeedbacks('clipIsSelected'); // new
         		}
     		},
             onTimecodeUpdate: (data) => {
 				console.log('got tc change');
-				const frameRate = Math.round(selectedClipData.fps * 100) / 100;
+				const frameRate = Math.round(this.selectedClipData.fps * 100) / 100;
 		
-				const t1 = timecodeToTotalFrames(selectedClipData.t1) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, selectedClipData.t1, frameRate, false).result.toString();
-				const t2 = timecodeToTotalFrames(selectedClipData.t2) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, selectedClipData.t2, frameRate, false).result.toString();
-				const trt = timecodeToTotalFrames(selectedClipData.trt) === timecodeToTotalFrames(selectedClipData.duration) ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, selectedClipData.trt, frameRate, false).result.toString();
-				const remain = calcTimeRemainingAsString(data.timecode, selectedClipData.duration, frameRate).result.toString();
+				const t1 = timecodeToTotalFrames(this.selectedClipData.t1) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t1, frameRate, false).result.toString();
+				const t2 = timecodeToTotalFrames(this.selectedClipData.t2) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t2, frameRate, false).result.toString();
+				const trt = timecodeToTotalFrames(this.selectedClipData.trt) === timecodeToTotalFrames(this.selectedClipData.duration) ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.trt, frameRate, false).result.toString();
+				const remain = calcTimeRemainingAsString(data.timecode, this.selectedClipData.duration, frameRate).result.toString();
 		
 				console.log("t1 " + t1 + " t2 " + t2 + " trt " + trt + " remain " + remain)
 				console.log("t1 " + JSON.stringify(t1) + " t2 " + t2 + " trt " + trt + " remain " + remain)
-
+				this.currentTimecode =  data.timecode;
 				this.setVariableValues({ 
-					current_timecode: jsonTimecodeToString(data.timecode),
+					current_timecode: simpleTime(jsonTimecodeToString(data.timecode)),
 					timer_t1: simpleTime(t1),
 					timer_t2: simpleTime(t2),
 					timer_trt: simpleTime(trt),
@@ -127,8 +135,11 @@ class ModuleInstance extends InstanceBase {
 
 	async configUpdated(config) {
 		this.config = config
-		// Re-validate config and attempt connection
-		//this.validateConfig()
+
+		//maybe this?
+		// if (this.config.host !== config.host || this.config.port !== config.port) {
+		// 	this.init(config);
+		// }
 	}
 
 	// Return config fields for web config
@@ -179,20 +190,10 @@ class ModuleInstance extends InstanceBase {
 		try {
 			const playlist = await fetchPlaylistData(this.config.host, this.config.port);
 			this.setupClipVariables(playlist);
+			this.playlistData = playlist;
 			return playlist;
 		} catch (error) {
 			this.log('error', `Failed to fetch playlist data: ${error.message}`);
-		}
-	}
-
-	async updatePlaylistVariables() {
-		try {
-			const playlist = await this.fetchAndSetPlaylistVariables();
-			if (playlist) {
-				this.setupClipVariables(playlist);
-			}
-		} catch (error) {
-			this.log('error', `Failed to update playlist variables: ${error.message}`);
 		}
 	}
 
@@ -209,6 +210,17 @@ class ModuleInstance extends InstanceBase {
 		this.setVariableValues({ [variableId]: value });
 	}
 
+	// Method to check if a clip exists at a given index
+	isClipExists(index) {
+		return index >= 0 && index < this.playlistData.length;
+	}
+
+	// // Method to check if a clip is selected at a given index
+	// isClipSelected(index) {
+	// 	console.log('called is isClipSelected');
+	// 	return index === this.selectedClipIndex;
+	// }
+
 	// updateVariableDefinitions() {
 	// 	const variableDefinitions = Object.keys(this.variables).map((key) => ({
 	// 		name: key,
@@ -221,6 +233,12 @@ class ModuleInstance extends InstanceBase {
 	// 		this.setVariableValue(name, value);
 	// 	}
 	// }
+
+    // getPlaybackState() {
+	// 	console.log('getPlaybackState');
+    //     return this.playbackState;
+    // }
+
 
 	updateActions() {
 		UpdateActions(this)

@@ -1,3 +1,5 @@
+const { stringToJsonTimecode, jsonTimecodeToString } = require('./src/utils')
+
 const { 
     handlePlay, 
     handlePause, 
@@ -9,7 +11,8 @@ const {
     requeueCurrentClip, 
     queuePreviousClip, 
     queueNextClip, 
-    loadClipByName 
+    loadClipByName,
+    updateClipTimersById
 } = require('./src/actionHandlers');
 
 module.exports = function (self)  {
@@ -174,5 +177,63 @@ module.exports = function (self)  {
                 }
             },
         },
+        updateClipTimersById: {
+            name: 'Update Clip Timers by ID',
+            options: [
+                {
+                    type: 'number',
+                    label: 'Clip ID',
+                    id: 'clipId',
+                    default: 0,
+                    useVariables: true,
+                    min: -1,
+                },
+                {
+                    type: 'dropdown',
+                    label: 'Timer',
+                    id: 'timer',
+                    default: 't1',
+                    choices: [
+                        { id: 't1', label: 'Timer T1' },
+                        { id: 't2', label: 'Timer T2' },
+                        { id: 'trt', label: 'Timer TRT' },
+                    ],
+                },
+                {
+                    type: 'textinput',
+                    label: 'Timecode',
+                    id: 'timecode',
+                    default: '',
+                    useVariables: true,
+                    description: 'Timecode should be in hh:mm:ss:ff format. Blank will set to the current timecode'
+                }
+            ],
+            callback: async (action, context) => {
+                let clipId = action.options.clipId;
+                const timer = action.options.timer;
+                let timecode = await context.parseVariablesInString(action.options.timecode);
+
+                if(clipId == -1){
+                    clipId = self.selectedClipIndex;
+                    console.log('change clip index to ' + clipId)
+                }
+
+                console.log('clip id is ' + clipId)
+
+                if (timecode == ''){
+                    timecode = jsonTimecodeToString(self.currentTimecode);
+                    console.log('timecode is blank - set timer to current timecode');
+                }
+                console.log('setting timer ' + timer + " for clip " + clipId + " at " + timecode);
+                try {
+                    await updateClipTimersById(self, clipId, timer, timecode);
+                } catch (error) {
+                    console.error('Update Clip Timers by ID command failed:', error);
+                }
+            }
+        },
+
+
+
     } )
 }

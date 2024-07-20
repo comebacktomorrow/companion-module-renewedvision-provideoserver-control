@@ -9,6 +9,7 @@ module.exports = async function (self) {
         { variableId: 'current_clip_duration', name: 'Current Clip Duration' },
         { variableId: 'current_playback_state', name: 'Current Playback State' },
         { variableId: 'current_timecode', name: 'Current Timecode' },
+        { variableId: 'current_clip_id', name: 'Current Clip ID' },
         { variableId: 'timer_t1', name: 'Timer T1' },
         { variableId: 'timer_t2', name: 'Timer T2' },
         { variableId: 'timer_trt', name: 'Timer TRT' },

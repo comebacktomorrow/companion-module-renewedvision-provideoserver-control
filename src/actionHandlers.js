@@ -1,3 +1,5 @@
+const { stringToJsonTimecode, jsonTimecodeToString } = require('./utils')
+
 let playlistData = [];
 
 const fetchPlaylistData = async (instance) => {
@@ -133,6 +135,32 @@ const handleLoadClipByIndex = async (instance, index) => {
     await fetchAndUpdateResponse(`http://${instance.config.host}:${instance.config.port}/API/PVS/timeline/active/id/${index}`, instance);
 };
 
+const updateClipTimersById = async (instance, clipId, timer, timecodeString) => {
+    try {
+        const jsonTimecode = stringToJsonTimecode(timecodeString);
+        //console.log(jsonTimecodeToString(jsonTimecode))
+        const response = await fetch(`http://${instance.config.host}:${instance.config.port}/API/PVS/playlist/id/${clipId}/times`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                timer,
+                timecode: jsonTimecode
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.message;
+    } catch (error) {
+        throw new Error('Error updating clip timers by ID: ' + error);
+    }
+};
+
 
 module.exports = {
     fetchPlaylistData,
@@ -150,4 +178,5 @@ module.exports = {
     handleStop, //works
     handleToggle, //works
     handleLoadClipByIndex, //works
+    updateClipTimersById
 };
