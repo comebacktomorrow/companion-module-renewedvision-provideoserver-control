@@ -100,16 +100,29 @@ const loadClipByName = async (instance, clipName) => {
 };
 
 // Basic Playback Control Actions
+//note: the change clip function is currently responding with text and not json, casuing this to throw an error.
+
 const fetchAndUpdateResponse = async (url, instance) => {
     try {
+        console.log('Request URL:', url); // Log the URL
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
-        const data = await response.json();
-        instance.updateStatus(data);
+
+        const contentType = response.headers.get('content-type');
+
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            instance.updateStatus(data);
+        } else {
+            const rawData = await response.text(); // Get raw text response
+            console.log('Raw response:', rawData); // Log raw response
+            console.error('Error: Expected JSON but received different content type');
+        }
     } catch (error) {
         console.error(`Error fetching data: ${error}`);
     }
