@@ -20,6 +20,23 @@ function jsonTimecodeToString(timecode, returnZero = true, showFrames = true){
     }
 };
 
+function stringToJsonTimecode(timecodeString) {
+    const parts = timecodeString.split(':');
+
+    if (parts.length !== 4) {
+        throw new Error('Invalid timecode format. Expected format: hh:mm:ss:ff');
+    }
+
+    const [hours, minutes, seconds, frames] = parts.map(part => parseInt(part, 10));
+
+    return {
+        hours: isNaN(hours) ? 0 : hours,
+        minutes: isNaN(minutes) ? 0 : minutes,
+        seconds: isNaN(seconds) ? 0 : seconds,
+        frames: isNaN(frames) ? 0 : frames
+    };
+}
+
  const timecodeToTotalFrames = (timecode, fps = 1) => {
     const frames =  (timecode.hours * 3600 + timecode.minutes * 60 + timecode.seconds) * fps + timecode.frames;
     return frames;
@@ -139,6 +156,7 @@ module.exports = {
     fetchAndUpdateResponse,
     calcTimeRemainingAsString,
     jsonTimecodeToString,
+    stringToJsonTimecode,
     timecodeToTotalFrames,
     timecodeToPercentage,
     simpleTime,
