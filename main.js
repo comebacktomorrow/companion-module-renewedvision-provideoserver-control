@@ -78,6 +78,10 @@ class ModuleInstance extends InstanceBase {
             onClipChange: async (data) => {
 				console.log('got clip change');
 				//await fetchPlaylistData();
+				// we don't have to 
+				// we should move to UUID - we don't have to get playlist for every update
+				// but unless we can accurately track isActive, things will get weird.
+				
 				selectedClipData = findClipByClipName(data.clipName);
 				if (selectedClipData) {
 					this.setVariableValues({ 
