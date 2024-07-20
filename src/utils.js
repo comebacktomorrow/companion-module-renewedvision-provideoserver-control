@@ -151,6 +151,27 @@ async function fetchAndUpdateResponse(url, options = { method: 'POST', body: {} 
     return {result: result.toString(), sign: sign}; 
 }
 
+const throttle = (func, limit) => {
+    let lastFunc;
+    let lastRan;
+    return function() {
+        const context = this;
+        const args = arguments;
+        if (!lastRan) {
+            func.apply(context, args);
+            lastRan = Date.now();
+        } else {
+            clearTimeout(lastFunc);
+            lastFunc = setTimeout(function() {
+                if ((Date.now() - lastRan) >= limit) {
+                    func.apply(context, args);
+                    lastRan = Date.now();
+                }
+            }, limit - (Date.now() - lastRan));
+        }
+    }
+};
+
 module.exports = {
     pad,
     fetchAndUpdateResponse,
@@ -160,5 +181,6 @@ module.exports = {
     timecodeToTotalFrames,
     timecodeToPercentage,
     simpleTime,
-    findSmallestRemainingTime
+    findSmallestRemainingTime,
+    throttle
   }

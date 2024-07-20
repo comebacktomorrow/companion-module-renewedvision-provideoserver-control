@@ -4,7 +4,7 @@ const UpdateActions = require('./actions')
 const UpdateFeedbacks = require('./feedbacks')
 const UpdateVariableDefinitions = require('./variables')
 
-const { fetchAndUpdateResponse, simpleTime, jsonTimecodeToString, timecodeToTotalFrames, calcTimeRemainingAsString } = require('./src/utils') // Import the fetchAndUpdateResponse function
+const { throttle, fetchAndUpdateResponse, simpleTime, jsonTimecodeToString, timecodeToTotalFrames, calcTimeRemainingAsString } = require('./src/utils') // Import the fetchAndUpdateResponse function
 const { fetchPlaylistData, findClipByClipName } = require('./src/playlist');
 const { setupWebSocket } = require('./src/websocket');
 const { updateStatus } = require('./src/coreLogic');
@@ -18,6 +18,8 @@ class ModuleInstance extends InstanceBase {
 		this.playbackState = 'Unknown';
 		this.currentTimecode = '00:00:00:00'
 		this.selectedClipIndex = -1;
+
+		this.throttledSetVariableValues = throttle(this.setTimecodeVariables, 500, this);
 	}
 
 	async init(config) {
@@ -101,23 +103,7 @@ class ModuleInstance extends InstanceBase {
     		},
             onTimecodeUpdate: (data) => {
 				console.log('got tc change');
-				const frameRate = Math.round(this.selectedClipData.fps * 100) / 100;
-		
-				const t1 = timecodeToTotalFrames(this.selectedClipData.t1) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t1, frameRate, false).result.toString();
-				const t2 = timecodeToTotalFrames(this.selectedClipData.t2) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t2, frameRate, false).result.toString();
-				const trt = timecodeToTotalFrames(this.selectedClipData.trt) === timecodeToTotalFrames(this.selectedClipData.duration) ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.trt, frameRate, false).result.toString();
-				const remain = calcTimeRemainingAsString(data.timecode, this.selectedClipData.duration, frameRate).result.toString();
-		
-				console.log("t1 " + t1 + " t2 " + t2 + " trt " + trt + " remain " + remain)
-				console.log("t1 " + JSON.stringify(t1) + " t2 " + t2 + " trt " + trt + " remain " + remain)
-				this.currentTimecode =  data.timecode;
-				this.setVariableValues({ 
-					current_timecode: simpleTime(jsonTimecodeToString(data.timecode)),
-					timer_t1: simpleTime(t1),
-					timer_t2: simpleTime(t2),
-					timer_trt: simpleTime(trt),
-					timer_remain: simpleTime(remain)
-				});
+				this.throttledSetVariableValues(data);
 			},
             onTallyUpdate: (data) => {
 				console.log('got tally change');
@@ -239,6 +225,25 @@ class ModuleInstance extends InstanceBase {
     //     return this.playbackState;
     // }
 
+	setTimecodeVariables(data) {
+		const frameRate = Math.round(this.selectedClipData.fps * 100) / 100;
+		
+		const t1 = timecodeToTotalFrames(this.selectedClipData.t1) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t1, frameRate, false).result.toString();
+		const t2 = timecodeToTotalFrames(this.selectedClipData.t2) === 0 ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.t2, frameRate, false).result.toString();
+		const trt = timecodeToTotalFrames(this.selectedClipData.trt) === timecodeToTotalFrames(this.selectedClipData.duration) ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.trt, frameRate, false).result.toString();
+		const remain = calcTimeRemainingAsString(data.timecode, this.selectedClipData.duration, frameRate).result.toString();
+
+		console.log("t1 " + t1 + " t2 " + t2 + " trt " + trt + " remain " + remain)
+		console.log("t1 " + JSON.stringify(t1) + " t2 " + t2 + " trt " + trt + " remain " + remain)
+		this.currentTimecode =  data.timecode;
+		this.setVariableValues({ 
+			current_timecode: simpleTime(jsonTimecodeToString(data.timecode)),
+			timer_t1: simpleTime(t1),
+			timer_t2: simpleTime(t2),
+			timer_trt: simpleTime(trt),
+			timer_remain: simpleTime(remain)
+		});
+	}
 
 	updateActions() {
 		UpdateActions(this)
