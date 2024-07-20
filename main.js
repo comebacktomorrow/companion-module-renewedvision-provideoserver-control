@@ -102,11 +102,11 @@ class ModuleInstance extends InstanceBase {
         		}
     		},
             onTimecodeUpdate: (data) => {
-				console.log('got tc change');
+				//console.log('got tc change');
 				this.throttledSetVariableValues(data);
 			},
             onTallyUpdate: (data) => {
-				console.log('got tally change');
+				//console.log('got tally change');
         		this.setVariableValues({ tally_state: data });
             },
         };
@@ -233,8 +233,8 @@ class ModuleInstance extends InstanceBase {
 		const trt = timecodeToTotalFrames(this.selectedClipData.trt) === timecodeToTotalFrames(this.selectedClipData.duration) ? '00:00:00:00' : calcTimeRemainingAsString(data.timecode, this.selectedClipData.trt, frameRate, false).result.toString();
 		const remain = calcTimeRemainingAsString(data.timecode, this.selectedClipData.duration, frameRate).result.toString();
 
-		console.log("t1 " + t1 + " t2 " + t2 + " trt " + trt + " remain " + remain)
-		console.log("t1 " + JSON.stringify(t1) + " t2 " + t2 + " trt " + trt + " remain " + remain)
+		//console.log("t1 " + t1 + " t2 " + t2 + " trt " + trt + " remain " + remain)
+		//console.log("t1 " + JSON.stringify(t1) + " t2 " + t2 + " trt " + trt + " remain " + remain)
 		this.currentTimecode =  data.timecode;
 		this.setVariableValues({ 
 			current_timecode: simpleTime(jsonTimecodeToString(data.timecode)),
