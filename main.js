@@ -58,8 +58,10 @@ class ModuleInstance extends InstanceBase {
 				this.selectedClipData = findClipByClipName(data.clipName);
 				if (this.selectedClipData) {
 					// Process additional data if needed
+					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
+					console.log('we should truncate names longer than ' + this.config.clipNameLength)
 					this.setVariableValues({ 
-						current_clip_name: this.selectedClipData.cleanName, 
+						current_clip_name: truncateName, 
 						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
 						playback_behavior: this.selectedClipData.playbackBehavior,
 						current_clip_id: this.selectedClipData.index,
@@ -91,8 +93,9 @@ class ModuleInstance extends InstanceBase {
 				this.selectedClipData = findClipByClipName(data.clipName);
 				console.log('main set index as ' + this.selectedClipIndex)
 				if (this.selectedClipData) {
+					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
 					this.setVariableValues({ 
-						current_clip_name: this.selectedClipData.cleanName, 
+						current_clip_name: truncateName, 
 						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
 						curent_playback_behavior: this.selectedClipData.playbackBehavior,
 						curent_clip_id: this.selectedClipData.index,
@@ -153,10 +156,12 @@ class ModuleInstance extends InstanceBase {
 				regex: Regex.PORT,
 			},
 			{
-				type: 'checkbox',
-				id: 'showFrames',
-				label: 'Show frames on times',
-				default: true
+				type: 'textinput',
+				id: 'clipNameLength',
+				label: 'Truncate clip names longer than',
+				type: 'number',
+				default: 12,
+				min:1,
 			},
 		]
 	}
@@ -187,7 +192,7 @@ class ModuleInstance extends InstanceBase {
 		const playlistSize = this.config.playlistSize || playlist.length;
 		for (let i = 0; i < playlistSize; i++) {
 			const clip = playlist[i] || { cleanName: '', duration: '' };
-			this.setVariable(`clip_name_${i}`, clip.cleanName);
+			this.setVariable(`clip_name_${i}`, this.truncateString(clip.cleanName, this.config.clipNameLength));
 			this.setVariable(`clip_duration_${i}`, simpleTime(jsonTimecodeToString(clip.duration)));
 		}
 	}
@@ -243,6 +248,10 @@ class ModuleInstance extends InstanceBase {
 			timer_trt: simpleTime(trt),
 			timer_remain: simpleTime(remain)
 		});
+	}
+
+	truncateString(str, num) {
+		return str.length > num ? `${str.slice(0, num)}` : str;
 	}
 
 	updateActions() {
