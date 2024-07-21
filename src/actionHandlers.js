@@ -117,7 +117,8 @@ const fetchAndUpdateResponse = async (url, instance) => {
 
         if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
-            instance.updateStatus(data);
+            //instance.updateStatus(data);
+            return(data);
         } else {
             const rawData = await response.text(); // Get raw text response
             console.log('Raw response:', rawData); // Log raw response
