@@ -141,7 +141,7 @@ async function fetchAndUpdateResponse(url, options = { method: 'POST', body: {} 
         result = t1.subtract(t2);
         sign = '-'
         } else {
-            console.log('zeroing out');
+            //console.log('zeroing out');
             result ='00:00:00:00';
         }
         

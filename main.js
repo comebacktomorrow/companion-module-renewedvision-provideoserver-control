@@ -177,6 +177,8 @@ class ModuleInstance extends InstanceBase {
 		return true;
 	}
 
+	
+
 	async fetchAndSetPlaylistVariables() {
 		try {
 			const playlist = await fetchPlaylistData(this.config.host, this.config.port);
