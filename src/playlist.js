@@ -4,7 +4,7 @@ let playlistData = [];
 
 async function fetchPlaylistData(host, port) {
     try {
-        console.log('trying ' + host)
+        console.log('fetching playlist data')
         const response = await fetch(`http://${host}:${port}/API/PVS/playlist`);
         const data = await response.json();
         playlistData = data; // Update playlistData with fetched data

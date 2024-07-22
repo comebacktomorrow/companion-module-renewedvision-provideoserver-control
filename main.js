@@ -25,11 +25,11 @@ class ModuleInstance extends InstanceBase {
 	async init(config) {
 		this.updateStatus(InstanceStatus.Disconnected);
 		this.updateStatus(InstanceStatus.Connecting);
-		this.config = config
+		this.config = config;
 		console.log('initing')
-		this.updateActions() // export actions
-		this.updateFeedbacks() // export feedbacks
-		this.updateVariableDefinitions() // export variable definitions
+		this.updateActions(); // export actions
+		this.updateFeedbacks(); // export feedbacks
+		this.updateVariableDefinitions(); // export variable definitions
 		
 		this.validateConfig();
 
