@@ -7,16 +7,21 @@ const setupWebSocket = (updateHandlers, instance) => {
 
     socket.on('open', () => {
         console.log('WebSocket connection established.');
+        instance.connectionOk();
     });
 
     socket.on('message', (event) => {
+        //console.log('Update Handlers:', updateHandlers);
         const socketData = JSON.parse(event);
         updateStatus(socketData, updateHandlers);
     });
 
     socket.on('close', () => {
         console.log('WebSocket connection closed. Attempting to reconnect...');
-        setTimeout(() => setupWebSocket(updateHandlers, instance), 1000);
+       instance.connectionDisconnect();
+        //setTimeout(() => setupWebSocket(updateHandlers, instance), 1000);
+        instance.maybeReconnect();
+       
     });
 
     socket.on('error', (error) => {

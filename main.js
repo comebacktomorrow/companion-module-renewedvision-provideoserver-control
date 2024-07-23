@@ -13,122 +13,68 @@ class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal);
 		this.variables = {};
-		this.selectedClipData = {};
+		this.selectedClipData = null;
 		this.playlistData ={};
 		this.playbackState = 'Unknown';
 		this.currentTimecode = '00:00:00:00'
 		this.selectedClipIndex = -1;
+		this.isInitalised = false;
 
 		this.throttledSetVariableValues = throttle(this.setTimecodeVariables, 500, this);
+
 	}
 
 	async init(config) {
-		this.updateStatus(InstanceStatus.Disconnected);
-		this.updateStatus(InstanceStatus.Connecting);
+		
 		this.config = config;
-		console.log('initing')
+		this.updateHandlers = this.setupUpdateHanlders();
+		this.initWebSocket(this.updateHandlers)
+		this.isInitalised = true;
+
 		this.updateActions(); // export actions
 		this.updateFeedbacks(); // export feedbacks
 		this.updateVariableDefinitions(); // export variable definitions
-		
-		this.validateConfig();
 
-		// Validate config and attempt connection
-		if (InstanceStatus.Connecting) {
-			// Fetch playlist data and update variables if the config is valid
-			try {
-				console.log('instance ok');
-				await this.fetchAndSetPlaylistVariables();
-				this.updateStatus(InstanceStatus.Ok)
-			} catch (error) {
-				console.error('Error updating playlist variables:', error);
-				this.updateStatus(InstanceStatus.Error);
-			}
-		} else {
-			console.warn('Invalid config. Skipping playlist update.');
-		}
-
-		if (InstanceStatus.Ok){
-			
-		// Initialize WebSocket
-        const updateHandlers = {
-            onLibraryUpdate: async (data) => {
-				console.log('got library update');
-				await this.fetchAndSetPlaylistVariables();
-				this.selectedClipData = findClipByClipName(data.clipName);
-				if (this.selectedClipData) {
-					// Process additional data if needed
-					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
-					console.log('we should truncate names longer than ' + this.config.clipNameLength)
-					this.setVariableValues({ 
-						current_clip_name: truncateName, 
-						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
-						playback_behavior: this.selectedClipData.playbackBehavior,
-						current_clip_id: this.selectedClipData.index,
-						//we could do selected clip feedback in here
-					});
-				}
-            },
-            onStateChange: (data) => {
-				console.log('got state change');
-				const stateTextMapping = {
-					'AT_START': 'Standby',
-					'AT_END': 'Stopped',
-					'PLAYING': 'Playing',
-					'PAUSED': 'Paused',
-					'CUEING': 'Seeking',
-				};
-				const stateText = stateTextMapping[data.state] || 'Unknown State';
-				this.setVariableValues({ current_playback_state: stateText });
-				this.playbackState = stateText; //new
-				this.checkFeedbacks('playbackState'); //new
-			},
-            onClipChange: async (data) => {
-				console.log('got clip change');
-				//await fetchPlaylistData();
-				// we don't have to 
-				// we should move to UUID - we don't have to get playlist for every update
-				// but unless we can accurately track isActive, things will get weird.
-				
-				this.selectedClipData = findClipByClipName(data.clipName);
-				console.log('main set index as ' + this.selectedClipIndex)
-				if (this.selectedClipData) {
-					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
-					this.setVariableValues({ 
-						current_clip_name: truncateName, 
-						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
-						curent_playback_behavior: this.selectedClipData.playbackBehavior,
-						curent_clip_id: this.selectedClipData.index,
-					});
-					this.selectedClipIndex = this.selectedClipData.index; // Set the selected clip index //new
-					this.checkFeedbacks('clipIsSelected'); // new
-        		}
-    		},
-            onTimecodeUpdate: (data) => {
-				//console.log('got tc change');
-				this.throttledSetVariableValues(data);
-			},
-            onTallyUpdate: (data) => {
-				//console.log('got tally change');
-        		this.setVariableValues({ tally_state: data });
-            },
-        };
-
-        setupWebSocket(updateHandlers, this);
-	}}
+	}
 
 	// When module gets deleted
 	async destroy() {
-		this.log('debug', 'destroy')
+		this.isInitalised = false;
+		this.log('debug', 'destroy');
+		if (this.ws) {
+			this.ws.close()
+			delete this.ws
+		}
+	}
+
+	maybeReconnect() {
+		console.log('maybe reconnect')
+		if (this.isInitalised) {
+			if (this.reconnect_timer) {
+				clearTimeout(this.reconnect_timer)
+			}
+			this.reconnect_timer = setTimeout(() => {
+				console.log('attempting to reconnect for real')
+				this.initWebSocket(this.updateHandlers);
+			}, 5000)
+		}
+	}
+
+	validateConfig() {
+		const { host, port } = this.config;
+		if (!host || !port) {
+			this.log('warn', 'Invalid host or port in config');
+			InstanceStatus.Disconnected;
+			return false;
+		}
+		this.updateStatus(InstanceStatus.Connecting);
+		return true;
 	}
 
 	async configUpdated(config) {
-		this.config = config
-
-		//maybe this?
-		// if (this.config.host !== config.host || this.config.port !== config.port) {
-		// 	this.init(config);
-		// }
+		this.config = config;
+		//maybe add the hanlder back in?
+		this.initWebSocket(this.updateHandlers);
 	}
 
 	// Return config fields for web config
@@ -166,27 +112,16 @@ class ModuleInstance extends InstanceBase {
 		]
 	}
 
-	validateConfig() {
-		const { host, port } = this.config;
-		if (!host || !port) {
-			this.log('warn', 'Invalid host or port in config');
-			this.updateStatus(InstanceStatus.BadConfig);
-			return false;
-		}
-		this.updateStatus(InstanceStatus.Connecting);
-		return true;
-	}
-
-	
-
 	async fetchAndSetPlaylistVariables() {
 		try {
 			const playlist = await fetchPlaylistData(this.config.host, this.config.port);
 			this.setupClipVariables(playlist);
 			this.playlistData = playlist;
+			console.log('got playlist')
 			return playlist;
 		} catch (error) {
 			this.log('error', `Failed to fetch playlist data: ${error.message}`);
+			throw error;
 		}
 	}
 
@@ -207,30 +142,6 @@ class ModuleInstance extends InstanceBase {
 	isClipExists(index) {
 		return index >= 0 && index < this.playlistData.length;
 	}
-
-	// // Method to check if a clip is selected at a given index
-	// isClipSelected(index) {
-	// 	console.log('called is isClipSelected');
-	// 	return index === this.selectedClipIndex;
-	// }
-
-	// updateVariableDefinitions() {
-	// 	const variableDefinitions = Object.keys(this.variables).map((key) => ({
-	// 		name: key,
-	// 		label: key,
-	// 	}));
-
-	// 	this.setVariableDefinitions(variableDefinitions);
-
-	// 	for (const [name, value] of Object.entries(this.variables)) {
-	// 		this.setVariableValue(name, value);
-	// 	}
-	// }
-
-    // getPlaybackState() {
-	// 	console.log('getPlaybackState');
-    //     return this.playbackState;
-    // }
 
 	setTimecodeVariables(data) {
 		const frameRate = Math.round(this.selectedClipData.fps * 100) / 100;
@@ -266,6 +177,116 @@ class ModuleInstance extends InstanceBase {
 
 	updateVariableDefinitions() {
 		UpdateVariableDefinitions(this)
+	}
+
+	async initWebSocket(updateHandler){
+		this.updateStatus(InstanceStatus.Connecting)
+		if (this.ws) {
+			this.ws.close(1000)
+			delete this.ws
+		}
+
+		console.log('Calling initWebSocket', updateHandler);
+
+		if (!updateHandler) {
+            console.error('Update handlers are undefined.');
+            this.updateStatus(InstanceStatus.ConnectionFailure);
+            return;
+        }
+
+		if (Object.keys(this.playlistData).length === 0){
+			await this.fetchAndSetPlaylistVariables();
+		}
+		//this.fetchAndSetPlaylistVariables();
+		console.log('passing off to websocket')
+		this.ws = setupWebSocket(updateHandler, this);
+
+	}
+
+	connectionOk(){
+		this.updateStatus(InstanceStatus.Ok);
+	}
+
+	connectionDisconnect(){
+		this.updateStatus(InstanceStatus.Disconnected);
+	}
+
+	setupUpdateHanlders() {
+		const updateHandlers = {
+			onLibraryUpdate: async (data) => {
+				console.log('got library update');
+				console.log(data);
+				await this.fetchAndSetPlaylistVariables();
+				this.selectedClipData = findClipByClipName(data.clipName);
+				if (this.selectedClipData) {
+					// Process additional data if needed
+					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
+					console.log('we should truncate names longer than ' + this.config.clipNameLength);
+					this.setVariableValues({ 
+						current_clip_name: truncateName, 
+						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
+						playback_behavior: this.selectedClipData.playbackBehavior,
+						current_clip_id: this.selectedClipData.index,
+						//we could do selected clip feedback in here
+					});
+					this.checkFeedbacks('clipExists'); 
+				}
+            },
+            onStateChange: (data) => {
+				console.log('got state change');
+				const stateTextMapping = {
+					'AT_START': 'Standby',
+					'AT_END': 'Stopped',
+					'PLAYING': 'Playing',
+					'PAUSED': 'Paused',
+					'CUEING': 'Seeking',
+				};
+				const stateText = stateTextMapping[data.state] || 'Unknown State';
+				this.setVariableValues({ current_playback_state: stateText });
+				this.playbackState = stateText; //new
+				this.checkFeedbacks('playbackState'); //new
+			},
+            onClipChange: async (data) => {
+				console.log('got clip change');
+				//this block does nothing since onClipChange implies we'll need to do findClipByName anyway
+				// if (!this.selectedClipData){
+				// 	this.selectedClipData = findClipByClipName(data.clipName);
+				// 	console.log('ClipChange - ive got ' + this.selectedClipData);
+				// }
+				//await fetchPlaylistData();
+				// we don't have to 
+				// we should move to UUID - we don't have to get playlist for every update
+				// but unless we can accurately track isActive, things will get weird.
+				console.log(this.selectedClipData);
+				this.selectedClipData = findClipByClipName(data.clipName);
+				console.log('main set index as ' + this.selectedClipIndex); //this gives us the old value
+				if (this.selectedClipData) {
+					let truncateName = this.truncateString(this.selectedClipData.cleanName, this.config.clipNameLength)
+					this.setVariableValues({ 
+						current_clip_name: truncateName, 
+						current_clip_duration: simpleTime(jsonTimecodeToString(this.selectedClipData.duration)),
+						curent_playback_behavior: this.selectedClipData.playbackBehavior,
+						curent_clip_id: this.selectedClipData.index,
+					});
+					this.selectedClipIndex = this.selectedClipData.index; // Set the selected clip index //new
+					this.checkFeedbacks('clipIsSelected'); // new
+					this.throttledSetVariableValues(data); // we also need to update timers
+        		}
+    		},
+            onTimecodeUpdate: (data) => {
+				//console.log('got tc change');
+				if (this.selectedClipData != null){
+				this.throttledSetVariableValues(data);
+				} else {
+					console.log('no timecode data yet')
+				}
+			},
+            onTallyUpdate: (data) => {
+				//console.log('got tally change');
+        		this.setVariableValues({ tally_state: data });
+            },
+		}
+		return updateHandlers;
 	}
 }
 
