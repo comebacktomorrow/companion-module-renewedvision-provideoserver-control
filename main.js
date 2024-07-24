@@ -99,6 +99,7 @@ class ModuleInstance extends InstanceBase {
 				id: 'playlistSize',
 				label: 'Number of clips to be displayed variables',
 				width: 4,
+				default: 10,
 				regex: Regex.PORT,
 			},
 			{
