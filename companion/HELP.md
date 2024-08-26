@@ -24,9 +24,12 @@ From terminal CD into the module directory and run `npm install`.
 NPM should then go through and install any dependancies.
 
 **Headless Installation**
-If you're using Docker, you can make use of the script by mounting to "/app/module-local-dev/pvs-remote-dev" directly to the main source directory of this module (or 'Companion Modules to module-local-dev if you want to make use of more than one dev module).
+If you're using Docker, you can make use of the script by mounting to `/app/module-local-dev/pvs-remote-dev` directly to the main source directory of this module (or 'Companion Modules to module-local-dev if you want to make use of more than one dev module).
 
 You'll need to set up a port passthrough for whatever port your using in this module, but if you're already using companion in a docker env, we'll assume you already know how to do that.
+
+**Companion Pi Installation**
+To install a module inside a Companion Pi instance, the module folder must be copied to `/opt/companion-module-dev/`. From there, you'll then need to run `npm install` to install the dependancies.
 
 **Linking Companion**
 Now in the Companion executable popup (not the web interface), click the cog in the top right hand corner. You should now see a Developer modules path option.
