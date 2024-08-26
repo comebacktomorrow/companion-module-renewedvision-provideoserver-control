@@ -85,6 +85,7 @@ class ModuleInstance extends InstanceBase {
 				id: 'host',
 				label: 'PVS Control App IP',
 				width: 8,
+				default: '127.0.0.1',
 				regex: Regex.IP,
 			},
 			{
@@ -92,6 +93,7 @@ class ModuleInstance extends InstanceBase {
 				id: 'port',
 				label: 'PVS Control App Port',
 				width: 4,
+				default: 5050,
 				regex: Regex.PORT,
 			},
 			{
