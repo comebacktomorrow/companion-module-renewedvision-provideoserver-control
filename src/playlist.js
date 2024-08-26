@@ -17,7 +17,7 @@ async function fetchPlaylistData(host, port) {
         return data; // Return data for chaining
     } catch (error) {
         console.error('Error fetching playlist data:', error);
-        throw error; // Propagate the error
+        return '';
     }
 }
 
