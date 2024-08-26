@@ -15,13 +15,18 @@ Besides IP address and (REST interface) PORT, this module exposes two other sett
 At the time I have not endeavoured to include it as an official Companion module as it may be such a niche use case.
 
 ## Getting started
-**Installation**
+**Manual Installation**
 Install **Node 18** from [Nodejs.org](https://nodejs.org/en/download/package-manager)
 Create a new folder called (for example) `Companion Modules`.
 Download this module, and extract it to the folder you just created.
 You should now have a folder inside a folder (ie. `Companion Modules\renewedvision-provideoserver-control-module\`
 From terminal CD into the module directory and run `npm install`.
 NPM should then go through and install any dependancies.
+
+**Headless Installation**
+If you're using Docker, you can make use of the script by mounting to "/app/module-local-dev/pvs-remote-dev" directly to the main source directory of this module (or 'Companion Modules to module-local-dev if you want to make use of more than one dev module).
+
+You'll need to set up a port passthrough for whatever port your using in this module, but if you're already using companion in a docker env, we'll assume you already know how to do that.
 
 **Linking Companion**
 Now in the Companion executable popup (not the web interface), click the cog in the top right hand corner. You should now see a Developer modules path option.
